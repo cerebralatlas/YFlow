@@ -240,15 +240,46 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Console welcome message
-console.log('%c🚀 YFlow - 强大的自托管 i18n 解决方案', 'color: #6366f1; font-size: 16px; font-weight: bold;');
-console.log('%cGitHub: https://github.com/your-repo/yflow', 'color: #8b5cf6; font-size: 12px;');
-
 // ============================================
 // Internationalization (i18n)
 // ============================================
 
-let currentLang = localStorage.getItem('lang') || 'en';
+// Get saved language or detect browser preference
+function getDefaultLanguage() {
+  const savedLang = localStorage.getItem('lang');
+  if (savedLang && (savedLang === 'zh' || savedLang === 'en')) {
+    return savedLang;
+  }
+
+  // Detect browser language preference
+  const browserLang = navigator.language || navigator.userLanguage;
+  if (browserLang && browserLang.startsWith('zh')) {
+    return 'zh';
+  }
+  return 'en';
+}
+
+let currentLang = getDefaultLanguage();
+
+// Console welcome message
+const consoleMessages = {
+  zh: {
+    title: '🚀 YFlow - 强大的自托管 i18n 解决方案',
+    github: 'GitHub: https://github.com/your-repo/yflow'
+  },
+  en: {
+    title: '🚀 YFlow - Powerful Self-Hosted i18n Solution',
+    github: 'GitHub: https://github.com/your-repo/yflow'
+  }
+};
+
+function logWelcomeMessage(lang) {
+  const msg = consoleMessages[lang] || consoleMessages.en;
+  console.log(`%c${msg.title}`, 'color: #6366f1; font-size: 16px; font-weight: bold;');
+  console.log(`%c${msg.github}`, 'color: #8b5cf6; font-size: 12px;');
+}
+
+logWelcomeMessage(currentLang);
 
 // Initialize language
 function initI18n() {
@@ -314,6 +345,9 @@ function setLanguage(lang, save = true) {
       : 'YFlow - Powerful Self-Hosted i18n Solution';
     document.title = title;
   }
+
+  // Log welcome message in current language
+  logWelcomeMessage(lang);
 
   console.log(`Language switched to: ${lang}`);
 }
