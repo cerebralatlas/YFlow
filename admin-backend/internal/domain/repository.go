@@ -1,6 +1,7 @@
 package domain
 
 import "context"
+import "time"
 
 // UserRepository 用户数据访问接口
 type UserRepository interface {
@@ -63,8 +64,9 @@ type TranslationKey struct {
 
 // TranslationCell 翻译矩阵单元格数据
 type TranslationCell struct {
-	ID    uint64 `json:"id"`
-	Value string `json:"value"`
+	ID        uint64    `json:"id"`
+	Value     string    `json:"value"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // ProjectMemberRepository 项目成员数据访问接口

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"i18n-flow/internal/domain"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -182,15 +183,16 @@ func (r *TranslationRepository) GetMatrix(ctx context.Context, projectID uint64,
 
 	// 优化：使用JOIN查询避免N+1问题，只查询必要字段
 	var results []struct {
-		ID           uint64 `gorm:"column:id"`
-		KeyName      string `gorm:"column:key_name"`
-		LanguageCode string `gorm:"column:language_code"`
-		Value        string `gorm:"column:value"`
+		ID           uint64    `gorm:"column:id"`
+		KeyName      string    `gorm:"column:key_name"`
+		LanguageCode string    `gorm:"column:language_code"`
+		Value        string    `gorm:"column:value"`
+		UpdatedAt    time.Time `gorm:"column:updated_at"`
 	}
 
 	err := r.db.WithContext(ctx).
 		Table("translations t").
-		Select("t.id, t.key_name, l.code as language_code, t.value").
+		Select("t.id, t.key_name, l.code as language_code, t.value, t.updated_at").
 		Joins("INNER JOIN languages l ON t.language_id = l.id AND l.status = ?", "active").
 		Where("t.project_id = ? AND t.key_name IN ? AND t.status = ?", projectID, keyNames, "active").
 		Find(&results).Error
@@ -206,8 +208,9 @@ func (r *TranslationRepository) GetMatrix(ctx context.Context, projectID uint64,
 			matrix[result.KeyName] = make(map[string]domain.TranslationCell)
 		}
 		matrix[result.KeyName][result.LanguageCode] = domain.TranslationCell{
-			ID:    result.ID,
-			Value: result.Value,
+			ID:        result.ID,
+			Value:     result.Value,
+			UpdatedAt: result.UpdatedAt,
 		}
 	}
 

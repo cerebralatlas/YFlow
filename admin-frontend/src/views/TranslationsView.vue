@@ -116,6 +116,9 @@
                     {{ row.translations[lang.code].value }}
                   </span>
                   <span v-else class="cell-placeholder">点击添加翻译</span>
+                  <div v-if="row.translations[lang.code]?.updated_at" class="cell-time">
+                    {{ formatTime(row.translations[lang.code].updated_at) }}
+                  </div>
                 </div>
               </div>
             </template>
@@ -354,6 +357,7 @@ const loadMatrix = async () => {
               language_id: lang.id,
               value: value || '',
               id: id,
+              updated_at: typeof cellData === 'object' ? cellData.updated_at : undefined,
             }
           }
         }
@@ -419,6 +423,18 @@ const editCell = (keyName: string, lang: Language) => {
 const cancelEdit = () => {
   editingCell.value = null
   editingValue.value = ''
+}
+
+// Format time display
+const formatTime = (timeStr: string) => {
+  if (!timeStr) return ''
+  const date = new Date(timeStr)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 const isSaving = ref(false)
@@ -727,6 +743,12 @@ const handleImport = async () => {
   color: #9ca3af;
   font-style: italic;
   font-size: 0.875rem;
+}
+
+.cell-time {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  margin-top: 4px;
 }
 
 .pagination-wrapper {

@@ -33,6 +33,7 @@ export interface TranslationCell {
   language_id: number
   value: string
   status?: 'active' | 'deprecated'
+  updated_at?: string
 }
 
 export interface TranslationMatrix {
