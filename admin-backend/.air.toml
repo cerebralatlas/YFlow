@@ -4,8 +4,8 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "./tmp/main.exe"
-  cmd = "go build -o ./tmp/main.exe ./cmd/server"
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main ./cmd/server"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "docs"]
   exclude_file = []
@@ -18,8 +18,8 @@ tmp_dir = "tmp"
   include_file = []
   kill_delay = "0s"
   log = "build-errors.log"
-  poll = false
-  poll_interval = 0
+  poll = true
+  poll_interval = 500
   rerun = false
   rerun_delay = 500
   send_interrupt = false
@@ -41,4 +41,4 @@ tmp_dir = "tmp"
 
 [screen]
   clear_on_rebuild = false
-  keep_scroll = true 
+  keep_scroll = true

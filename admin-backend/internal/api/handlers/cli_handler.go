@@ -122,9 +122,9 @@ func (h *CLIHandler) GetTranslations(ctx *gin.Context) {
 // PushKeysRequest 推送键请求
 type PushKeysRequest struct {
 	ProjectID    string                       `json:"project_id" binding:"required"`
-	Keys         []string                     `json:"keys" binding:"required"`
-	Defaults     map[string]string            `json:"defaults"`     // 保持向后兼容（已废弃）
-	Translations map[string]map[string]string `json:"translations"` // 新增：语言代码 -> 键值对映射
+	Keys         []string                     `json:"keys"`                  // 可选：如果为空且提供了 Translations，则执行批量导入
+	Defaults     map[string]string            `json:"defaults"`              // 已废弃，保持向后兼容
+	Translations map[string]map[string]string `json:"translations"`          // 语言代码 -> 键值对映射
 }
 
 // PushKeysResponse 推送键响应
@@ -135,8 +135,8 @@ type PushKeysResponse struct {
 }
 
 // PushKeys 推送翻译键
-// @Summary      推送翻译键
-// @Description  从CLI推送新的翻译键
+// @Summary      推送翻译键或批量导入翻译
+// @Description  从CLI推送新的翻译键，或批量导入/更新翻译数据
 // @Tags         CLI
 // @Accept       json
 // @Produce      json
@@ -178,7 +178,121 @@ func (h *CLIHandler) PushKeys(ctx *gin.Context) {
 		return
 	}
 
-	// 找到默认语言（通常是第一个或标记为默认的语言）
+	// 创建语言代码到ID的映射
+	languageCodeToID := make(map[string]uint64)
+	for _, lang := range languages {
+		languageCodeToID[lang.Code] = lang.ID
+	}
+
+	// 判断操作类型：批量导入或推送键
+	if len(req.Keys) == 0 && req.Translations != nil && len(req.Translations) > 0 {
+		// 批量导入模式
+		h.handleBulkImport(ctx, projectID, req.Translations, languageCodeToID)
+		return
+	}
+
+	// 推送键模式（原逻辑）
+	h.handlePushKeys(ctx, projectID, req, languages, languageCodeToID)
+}
+
+// handleBulkImport 处理批量导入翻译
+func (h *CLIHandler) handleBulkImport(
+	ctx *gin.Context,
+	projectID uint64,
+	translations map[string]map[string]string,
+	languageCodeToID map[string]uint64,
+) {
+	// 获取现有的翻译键，用于判断新增或更新
+	matrix, _, err := h.translationService.GetMatrix(ctx.Request.Context(), projectID, -1, 0, "")
+	if err != nil {
+		response.InternalServerError(ctx, "获取现有翻译失败")
+		return
+	}
+
+	var added []string
+	var existed []string
+	var failed []string
+
+	// 收集所有要导入的翻译
+	var inputs []domain.TranslationInput
+
+	for langCode, langTranslations := range translations {
+		langID, exists := languageCodeToID[langCode]
+		if !exists {
+			// 忽略未知语言
+			continue
+		}
+
+		for key, value := range langTranslations {
+			// 跳过空值
+			if value == "" {
+				continue
+			}
+
+			// 判断是新增还是更新
+			if _, keyExists := matrix[key]; keyExists {
+				if !containsString(existed, key) {
+					existed = append(existed, key)
+				}
+			} else {
+				if !containsString(added, key) && !containsString(existed, key) {
+					added = append(added, key)
+				}
+			}
+
+			inputs = append(inputs, domain.TranslationInput{
+				ProjectID:  projectID,
+				KeyName:    key,
+				LanguageID: langID,
+				Value:      value,
+			})
+		}
+	}
+
+	if len(inputs) == 0 {
+		response.Success(ctx, PushKeysResponse{
+			Added:   []string{},
+			Existed: existed,
+			Failed:  []string{},
+		})
+		return
+	}
+
+	// 使用 UpsertBatch 进行批量导入/更新
+	err = h.translationService.UpsertBatch(ctx.Request.Context(), inputs)
+	if err != nil {
+		// 如果失败，标记所有键为失败
+		for _, key := range added {
+			failed = append(failed, key)
+		}
+		added = []string{}
+	}
+
+	result := PushKeysResponse{
+		Added:   added,
+		Existed: existed,
+		Failed:  failed,
+	}
+
+	response.Success(ctx, result)
+}
+
+// handlePushKeys 处理推送键（原逻辑）
+func (h *CLIHandler) handlePushKeys(
+	ctx *gin.Context,
+	projectID uint64,
+	req PushKeysRequest,
+	languages []*domain.Language,
+	languageCodeToID map[string]uint64,
+) {
+	// 获取现有的翻译键
+	matrix, _, err := h.translationService.GetMatrix(ctx.Request.Context(), projectID, -1, 0, "")
+	if err != nil {
+		response.InternalServerError(ctx, "获取现有翻译失败")
+		return
+	}
+
+	// 找到默认语言
 	var defaultLanguage *domain.Language
 	for _, lang := range languages {
 		if lang.IsDefault {
@@ -187,19 +301,7 @@ func (h *CLIHandler) PushKeys(ctx *gin.Context) {
 		}
 	}
 	if defaultLanguage == nil && len(languages) > 0 {
-		defaultLanguage = languages[0] // 如果没有默认语言，使用第一个语言
-	}
-
-	if defaultLanguage == nil {
-		response.BadRequest(ctx, "no languages available in project")
-		return
-	}
-
-	// 获取现有的翻译键
-	matrix, _, err := h.translationService.GetMatrix(ctx.Request.Context(), projectID, -1, 0, "")
-	if err != nil {
-		response.InternalServerError(ctx, "获取现有翻译失败")
-		return
+		defaultLanguage = languages[0]
 	}
 
 	var added []string
@@ -233,7 +335,6 @@ func (h *CLIHandler) PushKeys(ctx *gin.Context) {
 				}
 			}
 
-			// DTO -> Domain params
 			input := domain.TranslationInput{
 				ProjectID:  projectID,
 				KeyName:    key,
@@ -241,7 +342,7 @@ func (h *CLIHandler) PushKeys(ctx *gin.Context) {
 				Value:      value,
 			}
 
-			_, err := h.translationService.Create(ctx.Request.Context(), input, 1) // 使用系统管理员ID
+			_, err := h.translationService.Create(ctx.Request.Context(), input, 1)
 			if err != nil {
 				keyFailed = true
 			} else if !keyAdded {
@@ -249,7 +350,6 @@ func (h *CLIHandler) PushKeys(ctx *gin.Context) {
 			}
 		}
 
-		// 记录结果
 		if keyFailed && !keyAdded {
 			failed = append(failed, key)
 		} else if keyAdded {
@@ -264,4 +364,14 @@ func (h *CLIHandler) PushKeys(ctx *gin.Context) {
 	}
 
 	response.Success(ctx, result)
+}
+
+// containsString 检查字符串是否在切片中
+func containsString(slice []string, target string) bool {
+	for _, s := range slice {
+		if s == target {
+			return true
+		}
+	}
+	return false
 }

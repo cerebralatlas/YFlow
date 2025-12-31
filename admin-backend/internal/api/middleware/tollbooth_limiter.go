@@ -65,8 +65,8 @@ func TollboothAPIRateLimitMiddleware() gin.HandlerFunc {
 
 // TollboothBatchOperationRateLimitMiddleware 批量操作限流中间件
 func TollboothBatchOperationRateLimitMiddleware() gin.HandlerFunc {
-	// 每秒2个请求，10分钟过期
-	return TollboothLimitMiddleware(2, 10*time.Minute, nil)
+	// 每秒20个请求，10分钟过期（CLI批量导入用）
+	return TollboothLimitMiddleware(20, 10*time.Minute, nil)
 }
 
 // TollboothCustomRateLimitMiddleware 自定义限流中间件
