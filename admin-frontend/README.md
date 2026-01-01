@@ -20,6 +20,7 @@ yflow 管理后台前端，基于 Vue 3 + TypeScript + Element Plus 构建。
 admin-frontend/
 ├── src/
 │   ├── assets/           # 静态资源
+│   ├── components/       # 公共组件
 │   ├── layouts/          # 布局组件
 │   ├── router/           # 路由配置
 │   ├── services/         # API 服务层
@@ -57,6 +58,7 @@ admin-frontend/
 - **响应式布局**: 适配桌面和移动端
 - **数据可视化**: 仪表板统计卡片
 - **主题支持**: 深色侧边栏 + 浅色内容区
+- **机器翻译**: 基于 LibreTranslate 自动填充翻译
 
 ## 快速开始
 

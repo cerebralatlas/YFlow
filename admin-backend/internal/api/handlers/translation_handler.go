@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"strconv"
 	"yflow/internal/api/response"
 	"yflow/internal/domain"
 	"yflow/internal/dto"
-	"strconv"
+	"yflow/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -12,15 +13,24 @@ import (
 
 // TranslationHandler 翻译处理器
 type TranslationHandler struct {
-	translationService domain.TranslationService
-	logger             *zap.Logger
+	translationService       domain.TranslationService
+	machineTranslationService *service.LibreTranslateService
+	languageRepo             domain.LanguageRepository
+	logger                   *zap.Logger
 }
 
 // NewTranslationHandler 创建翻译处理器
-func NewTranslationHandler(translationService domain.TranslationService, logger *zap.Logger) *TranslationHandler {
+func NewTranslationHandler(
+	translationService domain.TranslationService,
+	machineTranslationService *service.LibreTranslateService,
+	languageRepo domain.LanguageRepository,
+	logger *zap.Logger,
+) *TranslationHandler {
 	return &TranslationHandler{
-		translationService: translationService,
-		logger:             logger,
+		translationService:       translationService,
+		machineTranslationService: machineTranslationService,
+		languageRepo:             languageRepo,
+		logger:                   logger,
 	}
 }
 
@@ -638,3 +648,181 @@ func (h *TranslationHandler) Import(ctx *gin.Context) {
 
 	response.Success(ctx, gin.H{"message": "导入翻译成功"})
 }
+
+// AutoFillLanguage 自动填充语言翻译
+// @Summary      自动填充语言
+// @Description  使用机器翻译自动填充项目的某个语言的所有缺失翻译
+// @Tags         翻译管理
+// @Accept       json
+// @Produce      json
+// @Param        project_id  path      int                          true   "项目ID"
+// @Param        request     body      dto.AutoFillLanguageRequest  true   "填充请求"
+// @Success      200         {object}  dto.AutoFillLanguageResponse
+// @Failure      400         {object}  map[string]string
+// @Failure      500         {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /projects/{project_id}/auto-fill-language [post]
+func (h *TranslationHandler) AutoFillLanguage(ctx *gin.Context) {
+	projectIDStr := ctx.Param("project_id")
+	projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
+	if err != nil {
+		response.BadRequest(ctx, "无效的项目ID")
+		return
+	}
+
+	var req dto.AutoFillLanguageRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.ValidationError(ctx, err.Error())
+		return
+	}
+
+	// 检查机器翻译服务是否可用
+	if !h.machineTranslationService.IsAvailable(ctx.Request.Context()) {
+		response.InternalServerError(ctx, "机器翻译服务当前不可用，请稍后再试")
+		return
+	}
+
+	// 获取项目翻译矩阵
+	matrix, _, err := h.translationService.GetMatrix(ctx.Request.Context(), projectID, -1, 0, "")
+	if err != nil {
+		switch err {
+		case domain.ErrProjectNotFound:
+			response.NotFound(ctx, err.Error())
+		default:
+			response.InternalServerError(ctx, "获取翻译矩阵失败")
+		}
+		return
+	}
+
+	// 获取项目默认语言作为源语言
+	sourceLang := req.SourceLang
+	if sourceLang == "" {
+		// 这里应该从项目设置获取默认语言，暂用 en
+		sourceLang = "en"
+	}
+
+	// 转换语言代码：将 LibreTranslate 代码转换为 YFlow 代码
+	yflowTargetLang := service.FromLibreTranslateCode(req.TargetLang)
+	yflowSourceLang := service.FromLibreTranslateCode(sourceLang)
+	sourceLangCode := service.ToLibreTranslateCode(sourceLang)
+	targetLangCode := service.ToLibreTranslateCode(req.TargetLang)
+
+	// 获取目标语言信息
+	targetLangInfo, err := h.languageRepo.GetByCode(ctx.Request.Context(), yflowTargetLang)
+	if err != nil {
+		response.InternalServerError(ctx, "目标语言不存在: "+yflowTargetLang)
+		return
+	}
+
+	// 收集需要翻译的文本
+	var textsToTranslate []struct {
+		KeyName string
+		Text    string
+	}
+
+	for keyName, langs := range matrix {
+		// 使用 YFlow 语言代码检查目标语言是否缺失
+		if lang, ok := langs[yflowTargetLang]; !ok || lang.Value == "" {
+			// 使用源语言文本
+			if sourceText, ok := langs[yflowSourceLang]; ok && sourceText.Value != "" {
+				textsToTranslate = append(textsToTranslate, struct {
+					KeyName string
+					Text    string
+				}{KeyName: keyName, Text: sourceText.Value})
+			}
+		}
+	}
+
+	if len(textsToTranslate) == 0 {
+		response.Success(ctx, dto.AutoFillLanguageResponse{
+			Total:        0,
+			SuccessCount: 0,
+			FailedCount:  0,
+			Message:      "没有需要翻译的文本",
+		})
+		return
+	}
+
+	// 批量翻译
+	texts := make([]string, len(textsToTranslate))
+	for i, t := range textsToTranslate {
+		texts[i] = t.Text
+	}
+
+	results, err := h.machineTranslationService.TranslateBatch(ctx.Request.Context(), texts, sourceLangCode, targetLangCode)
+	if err != nil {
+		h.logger.Error("Auto-fill translation failed", zap.Error(err))
+		response.InternalServerError(ctx, "自动填充翻译失败: "+err.Error())
+		return
+	}
+
+	// 保存翻译结果
+	successCount := 0
+	failedCount := 0
+
+	// 准备批量保存的翻译
+	var translationsToUpsert []domain.TranslationInput
+	for i, result := range results {
+		if result != nil && result.TranslatedText != "" {
+			keyName := textsToTranslate[i].KeyName
+			translationsToUpsert = append(translationsToUpsert, domain.TranslationInput{
+				ProjectID:  projectID,
+				LanguageID: targetLangInfo.ID,
+				KeyName:    keyName,
+				Value:      result.TranslatedText,
+			})
+		} else {
+			failedCount++
+		}
+	}
+
+	// 批量保存翻译
+	if len(translationsToUpsert) > 0 {
+		if err := h.translationService.UpsertBatch(ctx.Request.Context(), translationsToUpsert); err != nil {
+			h.logger.Error("Failed to save translations", zap.Error(err))
+			response.InternalServerError(ctx, "保存翻译失败: "+err.Error())
+			return
+		}
+		successCount = len(translationsToUpsert)
+	}
+
+	response.Success(ctx, dto.AutoFillLanguageResponse{
+		Total:        len(textsToTranslate),
+		SuccessCount: successCount,
+		FailedCount:  failedCount,
+		Message:      "自动填充完成",
+	})
+}
+
+// GetSupportedLanguages 获取支持的语言列表
+// @Summary      获取支持的语言
+// @Description  获取机器翻译支持的语言列表
+// @Tags         翻译管理
+// @Produce      json
+// @Success      200 {object} []domain.MachineTranslationLanguage
+// @Failure      500 {object} map[string]string
+// @Security     BearerAuth
+// @Router       /translations/machine-translate/languages [get]
+func (h *TranslationHandler) GetSupportedLanguages(ctx *gin.Context) {
+	languages, err := h.machineTranslationService.GetSupportedLanguages(ctx.Request.Context())
+	if err != nil {
+		h.logger.Error("Failed to get supported languages", zap.Error(err))
+		response.InternalServerError(ctx, "获取支持语言失败")
+		return
+	}
+
+	response.Success(ctx, languages)
+}
+
+// HealthCheck 机器翻译服务健康检查
+// @Summary      健康检查
+// @Description  检查机器翻译服务是否可用
+// @Tags         翻译管理
+// @Produce      json
+// @Success      200 {object} map[string]bool
+// @Router       /translations/machine-translate/health [get]
+func (h *TranslationHandler) HealthCheck(ctx *gin.Context) {
+	available := h.machineTranslationService.IsAvailable(ctx.Request.Context())
+	response.Success(ctx, gin.H{"available": available})
+}
+

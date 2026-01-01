@@ -3,8 +3,12 @@ package di
 import (
 	"yflow/internal/api/handlers"
 	"yflow/internal/api/routes"
+	"yflow/internal/config"
+	"yflow/internal/domain"
+	"yflow/internal/service"
 
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 // AppModule 定义主模块
@@ -39,11 +43,19 @@ var AppModule = fx.Module("app",
 	fx.Provide(NewProjectMemberService),
 	fx.Provide(NewInvitationService),
 
+	// Machine Translation Service
+	fx.Provide(func(cfg *config.Config) *config.LibreTranslateConfig {
+		return &cfg.LibreTranslate
+	}),
+	fx.Provide(service.NewLibreTranslateService),
+
 	// Handlers
 	fx.Provide(handlers.NewUserHandler),
 	fx.Provide(handlers.NewProjectHandler),
 	fx.Provide(handlers.NewLanguageHandler),
-	fx.Provide(handlers.NewTranslationHandler),
+	fx.Provide(func(repo domain.LanguageRepository, ts domain.TranslationService, mt *service.LibreTranslateService, logger *zap.Logger) *handlers.TranslationHandler {
+		return handlers.NewTranslationHandler(ts, mt, repo, logger)
+	}),
 	fx.Provide(handlers.NewProjectMemberHandler),
 	fx.Provide(handlers.NewCLIHandler),
 	fx.Provide(handlers.NewDashboardHandler),

@@ -53,4 +53,21 @@ func (r *Router) setupTranslationRoutes(authRoutes *gin.RouterGroup) {
 	{
 		importRoutes.POST("/project/:project_id", r.TranslationHandler.Import)
 	}
+
+	// 机器翻译路由（应用限流中间件和项目编辑权限）
+	machineTranslateRoutes := authRoutes.Group("/translations/machine-translate")
+	machineTranslateRoutes.Use(middleware.TollboothBatchOperationRateLimitMiddleware())
+	machineTranslateRoutes.Use(r.middlewareFactory.RequireProjectEditor())
+	{
+		machineTranslateRoutes.GET("/languages", r.TranslationHandler.GetSupportedLanguages)
+		machineTranslateRoutes.GET("/health", r.TranslationHandler.HealthCheck)
+	}
+
+	// 自动填充语言路由
+	autoFillRoutes := authRoutes.Group("/projects")
+	autoFillRoutes.Use(middleware.TollboothBatchOperationRateLimitMiddleware())
+	autoFillRoutes.Use(r.middlewareFactory.RequireProjectEditor())
+	{
+		autoFillRoutes.POST("/:project_id/auto-fill-language", r.TranslationHandler.AutoFillLanguage)
+	}
 }

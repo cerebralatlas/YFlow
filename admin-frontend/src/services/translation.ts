@@ -7,6 +7,53 @@ import type {
   ImportTranslationsData,
 } from '@/types/translation'
 
+// Machine Translation Types
+export interface AutoFillLanguageRequest {
+  target_lang: string
+  source_lang?: string
+}
+
+export interface AutoFillLanguageResponse {
+  total: number
+  success_count: number
+  failed_count: number
+  message: string
+}
+
+export interface MachineTranslationLanguage {
+  code: string
+  name: string
+}
+
+// Machine Translation APIs
+
+/**
+ * 自动填充语言翻译
+ */
+export const autoFillLanguage = async (
+  projectId: number,
+  data: AutoFillLanguageRequest
+): Promise<AutoFillLanguageResponse> => {
+  const response = await api.post(`/projects/${projectId}/auto-fill-language`, data)
+  return response as unknown as AutoFillLanguageResponse
+}
+
+/**
+ * 获取机器翻译支持的语言列表
+ */
+export const getMachineTranslateLanguages = async (): Promise<MachineTranslationLanguage[]> => {
+  const response = await api.get('/translations/machine-translate/languages')
+  return response as unknown as MachineTranslationLanguage[]
+}
+
+/**
+ * 检查机器翻译服务健康状态
+ */
+export const checkMachineTranslateHealth = async (): Promise<{ available: boolean }> => {
+  const response = await api.get('/translations/machine-translate/health')
+  return response as unknown as { available: boolean }
+}
+
 /**
  * 获取翻译矩阵（用于表格展示）
  */

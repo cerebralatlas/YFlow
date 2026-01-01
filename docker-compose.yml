@@ -17,6 +17,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - yflow-network
 
   # 后端服务
   backend:
@@ -41,11 +43,9 @@ services:
       JWT_REFRESH_EXPIRATION_HOURS: ${JWT_REFRESH_EXPIRATION_HOURS:-168}
       CLI_API_KEY: ${CLI_API_KEY}
       ENV: ${ENV:-production}
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      LIBRE_TRANSLATE_URL: ${LIBRE_TRANSLATE_URL:-http://libretranslate:5000}
+    networks:
+      - yflow-network
 
   # 前端服务
   frontend:
@@ -61,6 +61,35 @@ services:
       - VITE_API_URL=${VITE_API_URL:-/api}
     ports:
       - "${FRONTEND_PORT:-8081}:8080"
+    networks:
+      - yflow-network
+
+  # LibreTranslate 机器翻译服务
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: yflow-libretranslate
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      - LT_TITLE=YFlow Translation
+      - LT_DISABLE_RATE_LIMIT=1
+      - LT_REQUIRE_API_KEY=false
+    volumes:
+      - libretranslate-data:/var/lib/LibreTranslate
+    healthcheck:
+      test: ["CMD", "curl", "-kf", "http://localhost:5000/languages"]
+      interval: 30s
+      timeout: 15s
+      retries: 10
+      start_period: 60s
+    networks:
+      - yflow-network
+
+networks:
+  yflow-network:
+    driver: bridge
 
 volumes:
   mysql_data:
+  libretranslate-data:

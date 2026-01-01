@@ -42,6 +42,12 @@ type CLIConfig struct {
 	APIKey string
 }
 
+// LibreTranslateConfig LibreTranslate 机器翻译配置
+type LibreTranslateConfig struct {
+	URL   string
+	APIKey string
+}
+
 // LogConfig 日志配置
 type LogConfig struct {
 	Level      string `json:"level"`       // 全局日志级别
@@ -57,12 +63,13 @@ type LogConfig struct {
 
 // Config 应用配置
 type Config struct {
-	Env   string // 运行环境: development, staging, production
-	DB    DBConfig
-	JWT   JWTConfig
-	CLI   CLIConfig
-	Log   LogConfig
-	Redis RedisConfig
+	Env              string
+	DB               DBConfig
+	JWT              JWTConfig
+	CLI              CLIConfig
+	Log              LogConfig
+	Redis            RedisConfig
+	LibreTranslate   LibreTranslateConfig
 }
 
 // Load 加载配置
@@ -108,6 +115,10 @@ func Load() (*Config, error) {
 			MaxAge:     getEnvAsInt("LOG_MAX_AGE", 7),
 			MaxBackups: getEnvAsInt("LOG_MAX_BACKUPS", 5),
 			Compress:   getEnvAsBool("LOG_COMPRESS", true),
+		},
+		LibreTranslate: LibreTranslateConfig{
+			URL:   getEnv("LIBRE_TRANSLATE_URL", "http://localhost:5000"),
+			APIKey: getEnv("LIBRE_TRANSLATE_API_KEY", ""),
 		},
 	}
 

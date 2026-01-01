@@ -132,6 +132,8 @@ go test ./... -coverprofile=coverage.out  # 带覆盖率
 | `LOG_LEVEL` | 日志级别 | info |
 | `LOG_FORMAT` | 日志格式 | console |
 | `LOG_OUTPUT` | 日志输出 | both |
+| `LIBRE_TRANSLATE_URL` | LibreTranslate 服务地址 | http://localhost:5000 |
+| `LIBRE_TRANSLATE_API_KEY` | LibreTranslate API 密钥（可选） | - |
 
 ### 密码复杂度要求
 
@@ -189,6 +191,38 @@ go test ./... -coverprofile=coverage.out  # 带覆盖率
 | `/api/translations/:id` | DELETE | 删除翻译 |
 | `/api/exports/project/:id` | GET | 导出翻译 |
 | `/api/imports/project/:id` | POST | 导入翻译 |
+
+### 机器翻译（自动填充）
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/translations/machine-translate/languages` | GET | 获取支持的语言列表 |
+| `/api/translations/machine-translate/health` | GET | 检查机器翻译服务状态 |
+| `/api/projects/:id/auto-fill-language` | POST | 自动填充缺失翻译 |
+
+**自动填充请求示例：**
+
+```json
+POST /api/projects/1/auto-fill-language
+{
+  "source_lang": "en",
+  "target_lang": "zh"
+}
+```
+
+**响应示例：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "total": 10,
+    "success_count": 8,
+    "failed_count": 2,
+    "message": "自动填充完成"
+  }
+}
+```
 
 ### 邀请管理
 
@@ -274,12 +308,28 @@ go test ./... -coverprofile=coverage.out  # 带覆盖率
 ### 使用 Docker Compose
 
 ```bash
-# 启动所有服务
+# 启动所有服务（MySQL、Redis、LibreTranslate、后端）
 docker-compose up -d
 
 # 查看日志
 docker-compose logs -f
 ```
+
+**包含的服务：**
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| MySQL | 3306 | 主数据库 |
+| Redis | 6379 | 缓存服务 |
+| LibreTranslate | 5000 | 机器翻译服务 |
+| 后端 | 8080 | API 服务 |
+
+**LibreTranslate 配置：**
+
+机器翻译使用 [LibreTranslate](https://libretranslate.com/) 开源翻译引擎。默认配置：
+- 地址: `http://localhost:5000`
+- 支持语言: 英文、中文、日文、韩文、法文、德文、西班牙文等 30+ 语言
+- API Key: 可选，无需认证时留空
 
 ### 独立构建
 

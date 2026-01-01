@@ -114,3 +114,23 @@ type InvitationValidationResult struct {
 	Role       string    `json:"role"`
 	ExpiresAt  time.Time `json:"expires_at"`
 }
+
+// MachineTranslationService 机器翻译服务接口
+type MachineTranslationService interface {
+	Translate(ctx context.Context, text, sourceLang, targetLang string) (*MachineTranslationResult, error)
+	TranslateBatch(ctx context.Context, texts []string, sourceLang, targetLang string) ([]*MachineTranslationResult, error)
+	GetSupportedLanguages(ctx context.Context) ([]MachineTranslationLanguage, error)
+	IsAvailable(ctx context.Context) bool
+}
+
+// MachineTranslationResult 机器翻译结果
+type MachineTranslationResult struct {
+	TranslatedText     string `json:"translated_text"`
+	DetectedSourceLang string `json:"detected_source_lang,omitempty"`
+}
+
+// MachineTranslationLanguage 支持的语言
+type MachineTranslationLanguage struct {
+	Code  string `json:"code"`
+	Name  string `json:"name"`
+}

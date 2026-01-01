@@ -48,6 +48,9 @@
             <el-button @click="showImportDialog = true" icon="Upload">
               导入
             </el-button>
+            <el-button type="success" @click="showMachineTranslationDialog = true" icon="MagicStick">
+              机器翻译
+            </el-button>
           </div>
         </div>
 
@@ -235,6 +238,15 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- Machine Translation Dialog -->
+    <MachineTranslationDialog
+      v-model="showMachineTranslationDialog"
+      :project-id="selectedProjectId || 0"
+      :show-tabs="true"
+      title="机器翻译"
+      @filled="loadMatrix"
+    />
   </div>
 </template>
 
@@ -246,7 +258,8 @@ import type { TranslationMatrix, Language, BatchTranslationRequest, ImportTransl
 import type { Project } from '@/types/api'
 import api from '@/services/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Download, Upload, UploadFilled, FolderOpened, Document, Delete } from '@element-plus/icons-vue'
+import { Search, Plus, Download, Upload, UploadFilled, FolderOpened, Document, Delete, MagicStick } from '@element-plus/icons-vue'
+import MachineTranslationDialog from '@/components/MachineTranslationDialog.vue'
 
 // State
 const projects = ref<Project[]>([])
@@ -269,6 +282,7 @@ const editInput = ref<HTMLTextAreaElement[] | null>(null)
 // Dialogs
 const showAddKeyDialog = ref(false)
 const showImportDialog = ref(false)
+const showMachineTranslationDialog = ref(false)
 const newKey = ref({ keyName: '', context: '', translations: {} as Record<string, string> })
 const importFile = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
