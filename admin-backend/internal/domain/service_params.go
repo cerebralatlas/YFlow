@@ -84,10 +84,10 @@ type BatchTranslationParams struct {
 
 // DashboardStats 仪表板统计结果
 type DashboardStats struct {
-	TotalProjects     int
-	TotalLanguages    int
-	TotalTranslations int
-	TotalKeys         int
+	TotalProjects     int    `json:"total_projects"`
+	TotalLanguages    int    `json:"total_languages"`
+	TotalTranslations int    `json:"total_translations"`
+	TotalKeys         int    `json:"total_keys"`
 }
 
 // ========== Project Member Service Params ==========

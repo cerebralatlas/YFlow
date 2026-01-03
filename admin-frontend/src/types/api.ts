@@ -68,10 +68,10 @@ export interface RefreshTokenParams {
  * 仪表板统计信息
  */
 export interface DashboardStats {
-  TotalProjects: number
-  TotalLanguages: number
-  TotalKeys: number
-  TotalTranslations: number
+  total_projects: number
+  total_languages: number
+  total_keys: number
+  total_translations: number
 }
 
 /**

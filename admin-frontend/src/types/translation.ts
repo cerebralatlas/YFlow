@@ -72,3 +72,22 @@ export interface ImportTranslationsData {
     [key: string]: string
   }
 }
+
+// ==================== Machine Translation ====================
+
+export interface AutoFillLanguageRequest {
+  target_lang: string
+  source_lang?: string
+}
+
+export interface AutoFillLanguageResponse {
+  total: number
+  success_count: number
+  failed_count: number
+  message: string
+}
+
+export interface MachineTranslationLanguage {
+  code: string
+  name: string
+}

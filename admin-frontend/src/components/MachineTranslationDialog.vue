@@ -61,8 +61,8 @@ import { InfoFilled } from '@element-plus/icons-vue'
 import {
   autoFillLanguage,
   getMachineTranslateLanguages,
-  type MachineTranslationLanguage,
 } from '@/services/translation'
+import type { MachineTranslationLanguage } from '@/types/translation'
 
 const props = defineProps<{
   modelValue: boolean
