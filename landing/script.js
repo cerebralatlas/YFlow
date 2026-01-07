@@ -259,11 +259,11 @@ let currentLang = getDefaultLanguage();
 const consoleMessages = {
   zh: {
     title: '🚀 YFlow - 强大的自托管 i18n 解决方案',
-    github: 'GitHub: https://github.com/cerebralatlas/yflow'
+    github: 'GitHub: https://github.com/ishechuan/yflow'
   },
   en: {
     title: '🚀 YFlow - Powerful Self-Hosted i18n Solution',
-    github: 'GitHub: https://github.com/cerebralatlas/yflow'
+    github: 'GitHub: https://github.com/ishechuan/yflow'
   }
 };
 

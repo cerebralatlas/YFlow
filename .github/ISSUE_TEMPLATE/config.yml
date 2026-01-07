@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Need help?
+    url: https://github.com/ishechuan/yflow/discussions
+    about: If you have usage questions, please ask in Discussions
+  - name: Documentation
+    url: https://github.com/ishechuan/yflow/tree/master/docs
+    about: Check the project documentation, your question may already be answered

@@ -81,12 +81,13 @@ After deployment, you can log in with:
 
 ## Contributing
 
-Contributions are welcome! Please read our [contributing guide](docs/guide/getting-started.md) for details on our code of conduct and the process for submitting pull requests.
+Contributions are welcome! Please read our [contributing guide](CONTRIBUTING.md) for details.
 
 ## Community
 
-- [GitHub Issues](https://github.com/your-org/yflow/issues) - Report bugs or request features
-- [Discord](https://discord.gg/your-server) - Join our community discussion
+- [GitHub Issues](https://github.com/ishechuan/yflow/issues) - Report bugs or request features
+- [GitHub Discussions](https://github.com/ishechuan/yflow/discussions) - Ask questions and discuss
+- [Code of Conduct](.github/CODE_OF_CONDUCT.md) - Our community guidelines
 
 ## License
 
