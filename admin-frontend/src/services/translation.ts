@@ -8,6 +8,8 @@ import type {
   AutoFillLanguageRequest,
   AutoFillLanguageResponse,
   MachineTranslationLanguage,
+  TranslationHistoryQueryParams,
+  TranslationHistoryListResponse,
 } from '@/types/translation'
 
 // Machine Translation APIs
@@ -132,4 +134,73 @@ export const importTranslations = async (
   return api.post(`/imports/project/${projectId}`, data, {
     params: { format },
   })
+}
+
+// ==================== Translation History APIs ====================
+
+/**
+ * 获取单个翻译的历史记录
+ */
+export const getTranslationHistory = async (
+  translationId: number,
+  params?: TranslationHistoryQueryParams
+): Promise<TranslationHistoryListResponse> => {
+  const query: Record<string, any> = {
+    page: params?.page || 1,
+    page_size: params?.page_size || 10,
+  }
+  if (params?.operation) query.operation = params.operation
+  if (params?.start_date) query.start_date = params.start_date
+  if (params?.end_date) query.end_date = params.end_date
+
+  const response = await api.get(`/translations/${translationId}/history`, { params: query }) as {
+    data: TranslationHistoryListResponse
+    meta: any
+  }
+  return response.data
+}
+
+/**
+ * 获取项目的翻译历史
+ */
+export const getProjectTranslationHistory = async (
+  projectId: number,
+  params?: TranslationHistoryQueryParams
+): Promise<TranslationHistoryListResponse> => {
+  const query: Record<string, any> = {
+    page: params?.page || 1,
+    page_size: params?.page_size || 10,
+  }
+  if (params?.operation) query.operation = params.operation
+  if (params?.keyword) query.keyword = params.keyword
+  if (params?.start_date) query.start_date = params.start_date
+  if (params?.end_date) query.end_date = params.end_date
+
+  const response = await api.get(`/projects/${projectId}/translation-history`, { params: query }) as {
+    data: TranslationHistoryListResponse
+    meta: any
+  }
+  return response.data
+}
+
+/**
+ * 获取用户的翻译操作历史
+ */
+export const getUserTranslationHistory = async (
+  userId: number,
+  params?: TranslationHistoryQueryParams
+): Promise<TranslationHistoryListResponse> => {
+  const query: Record<string, any> = {
+    page: params?.page || 1,
+    page_size: params?.page_size || 10,
+  }
+  if (params?.operation) query.operation = params.operation
+  if (params?.start_date) query.start_date = params.start_date
+  if (params?.end_date) query.end_date = params.end_date
+
+  const response = await api.get(`/users/${userId}/translation-history`, { params: query }) as {
+    data: TranslationHistoryListResponse
+    meta: any
+  }
+  return response.data
 }

@@ -91,3 +91,38 @@ export interface MachineTranslationLanguage {
   code: string
   name: string
 }
+
+// ==================== Translation History ====================
+
+export interface TranslationHistory {
+  id: number
+  translation_id?: number
+  project_id: number
+  key_name: string
+  language_id: number
+  old_value?: string
+  new_value?: string
+  operation: 'create' | 'update' | 'delete'
+  operated_by: number
+  operated_at: string
+  metadata?: string
+}
+
+export interface TranslationHistoryQueryParams {
+  page?: number
+  page_size?: number
+  operation?: string
+  keyword?: string
+  start_date?: string
+  end_date?: string
+}
+
+export interface TranslationHistoryListResponse {
+  histories: TranslationHistory[]
+  meta: {
+    page: number
+    page_size: number
+    total_count: number
+    total_pages: number
+  }
+}

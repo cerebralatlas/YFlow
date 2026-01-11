@@ -77,7 +77,6 @@ export default defineConfig({
       ocean: {
         DEFAULT: '#0c4a6e',
         light: '#075985',
-        DEFAULT: '#0c4a6e',
         dark: '#082f49',
         deeper: '#020617',
       },

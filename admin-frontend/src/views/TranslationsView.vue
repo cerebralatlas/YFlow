@@ -127,12 +127,21 @@
           </el-table-column>
 
           <!-- 操作列 -->
-          <el-table-column label="操作" width="200" fixed="right" align="center">
+          <el-table-column label="操作" width="260" fixed="right" align="center">
             <template #default="{ row }">
-              <button class="action-button action-delete" @click="handleDeleteKey(row.key_name)">
-                <el-icon><Delete /></el-icon>
-                <span>删除</span>
-              </button>
+              <div class="action-buttons">
+                <button
+                  class="action-button action-history"
+                  @click="showHistory(row.key_name)"
+                >
+                  <el-icon><Clock /></el-icon>
+                  <span>历史</span>
+                </button>
+                <button class="action-button action-delete" @click="handleDeleteKey(row.key_name)">
+                  <el-icon><Delete /></el-icon>
+                  <span>删除</span>
+                </button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -248,19 +257,29 @@
       title="机器翻译"
       @filled="loadMatrix"
     />
+
+    <!-- 翻译历史对话框 -->
+    <TranslationHistoryDialog
+      v-model="showHistoryDialog"
+      mode="project"
+      :project-id="selectedProjectId || 0"
+      :key-name="selectedKeyName"
+      @closed="showHistoryDialog = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch, computed } from 'vue'
-import { getTranslationMatrix, batchCreateTranslations, exportTranslations, importTranslations } from '@/services/translation'
+import { ref, onMounted, nextTick, computed } from 'vue'
+import { batchCreateTranslations, exportTranslations, importTranslations } from '@/services/translation'
 import { getLanguages } from '@/services/language'
 import type { TranslationMatrix, Language, BatchTranslationRequest, ImportTranslationsData } from '@/types/translation'
 import type { Project } from '@/types/api'
 import api from '@/services/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Download, Upload, UploadFilled, FolderOpened, Document, Delete, MagicStick } from '@element-plus/icons-vue'
+import { UploadFilled, FolderOpened, Document, Delete, Clock } from '@element-plus/icons-vue'
 import MachineTranslationDialog from '@/components/MachineTranslationDialog.vue'
+import TranslationHistoryDialog from '@/components/TranslationHistoryDialog.vue'
 
 // State
 const projects = ref<Project[]>([])
@@ -284,6 +303,8 @@ const editInput = ref<HTMLTextAreaElement[] | null>(null)
 const showAddKeyDialog = ref(false)
 const showImportDialog = ref(false)
 const showMachineTranslationDialog = ref(false)
+const showHistoryDialog = ref(false)
+const selectedKeyName = ref<string>('')
 const newKey = ref({ keyName: '', context: '', translations: {} as Record<string, string> })
 const importFile = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -408,11 +429,7 @@ const handleSearch = () => {
   }, 300)
 }
 
-// Pagination
-const changePage = (page: number) => {
-  currentPage.value = page
-  loadMatrix()
-}
+// Pagination is handled by el-pagination component
 
 // Edit cell
 const editCell = (keyName: string, lang: Language) => {
@@ -632,6 +649,13 @@ const handleImport = async () => {
   } catch (err: any) {
     ElMessage.error('导入失败: ' + (err.message || '未知错误'))
   }
+}
+
+// Show history dialog
+const showHistory = (keyName: string) => {
+  if (!selectedProjectId.value) return
+  selectedKeyName.value = keyName
+  showHistoryDialog.value = true
 }
 </script>
 
@@ -862,6 +886,12 @@ const handleImport = async () => {
 }
 
 /* 操作按钮 */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
 .action-button {
   display: inline-flex;
   align-items: center;
@@ -874,6 +904,16 @@ const handleImport = async () => {
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+}
+
+.action-history {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #2563eb;
+}
+
+.action-history:hover {
+  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+  transform: translateY(-1px);
 }
 
 .action-delete {
