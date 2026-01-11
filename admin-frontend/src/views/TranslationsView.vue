@@ -701,19 +701,47 @@ const showHistory = (keyName: string) => {
 }
 
 :deep(.project-selector .el-input__wrapper) {
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: none;
   border: 1px solid #e2e8f0;
   transition: all 0.2s ease;
 }
 
-:deep(.project-selector .el-input__wrapper:hover) {
+:deep(.project-selector:hover .el-input__wrapper) {
   border-color: #cbd5e1;
 }
 
 :deep(.project-selector .el-input__wrapper.is-focus) {
   border-color: #06b6d4;
   box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+}
+
+/* Dropdown menu popup styling */
+:deep(.project-selector .el-popper) {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f1f5f9;
+  padding: 8px;
+}
+
+:deep(.project-selector .el-select-dropdown__item) {
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #475569;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  margin: 2px 0;
+}
+
+:deep(.project-selector .el-select-dropdown__item:hover) {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+:deep(.project-selector .el-select-dropdown__item.is-selected) {
+  background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+  color: #0891b2;
+  font-weight: 600;
 }
 
 /* 工具栏卡片 */
